@@ -134,10 +134,13 @@ final class YouTubeMusicMetadataClient {
     }
 
     private static TrackMetadata parseRenderer(JSONObject renderer) {
+        String artworkUrl = thumbnailUrl(renderer);
         JSONArray runs = runs(renderer.optJSONObject("longBylineText"));
         if (runs == null) runs = runs(renderer.optJSONObject("subtitle"));
         if (runs == null) runs = flexColumnRuns(renderer, 1);
-        if (runs == null) return null;
+        if (runs == null) {
+            return artworkUrl == null ? null : new TrackMetadata(null, null, 0, artworkUrl);
+        }
 
         String album = null;
         StringBuilder artists = new StringBuilder();
@@ -169,7 +172,23 @@ final class YouTubeMusicMetadataClient {
         }
 
         String albumArtist = artists.length() == 0 ? null : artists.toString();
-        return new TrackMetadata(album, albumArtist, year);
+        return new TrackMetadata(album, albumArtist, year, artworkUrl);
+    }
+
+    private static String thumbnailUrl(JSONObject renderer) {
+        JSONObject thumbnail = renderer.optJSONObject("thumbnail");
+        if (thumbnail == null) return null;
+        JSONObject musicThumbnail = thumbnail.optJSONObject("musicThumbnailRenderer");
+        if (musicThumbnail != null) thumbnail = musicThumbnail.optJSONObject("thumbnail");
+        if (thumbnail == null) return null;
+        JSONArray thumbnails = thumbnail.optJSONArray("thumbnails");
+        if (thumbnails == null) return null;
+        for (int i = thumbnails.length() - 1; i >= 0; i--) {
+            JSONObject candidate = thumbnails.optJSONObject(i);
+            String url = candidate == null ? null : clean(candidate.optString("url", null));
+            if (url != null && url.startsWith("https://") && url.length() <= 300) return url;
+        }
+        return null;
     }
 
     private static String rendererTitle(JSONObject renderer) {

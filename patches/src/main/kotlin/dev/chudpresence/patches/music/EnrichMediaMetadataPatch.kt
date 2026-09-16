@@ -25,7 +25,7 @@ private const val WRAPPER =
 @Suppress("unused")
 val enrichMediaMetadataPatch = bytecodePatch(
     name = "Enrich media metadata",
-    description = "Adds album, album artist, and year to YouTube Music's Android media session."
+    description = "Adds album, album artist, year, and public artwork to YouTube Music's Android media session."
 ) {
     compatibleWith("com.google.android.apps.youtube.music")
 

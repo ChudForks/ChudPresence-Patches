@@ -8,12 +8,14 @@ media keys when available:
 - `android.media.metadata.ALBUM`
 - `android.media.metadata.ALBUM_ARTIST`
 - `android.media.metadata.YEAR`
+- `android.media.metadata.ALBUM_ART_URI`
 
 This makes the album visible to ChudPresence and to other Android media-session consumers.
 When ChudPresence receives it, the Android activity card shows the album on its own row and
 an enriched-metadata marker. Discord only provides two visible activity text rows, so the
-artist stays on the second row and the album is used as the cover-art label. Unpatched clients
-remain supported and simply omit those album details.
+artist stays on the second row and the album is used as the cover-art label. Local RPC uses the
+public album-art URI directly when one is available. Unpatched clients remain supported and
+simply omit metadata that YouTube Music does not already expose.
 The lookup is best-effort: a network/API failure leaves YouTube Music's original metadata
 untouched. Results are cached in memory and late results are never applied to a newer track.
 
@@ -33,6 +35,17 @@ Set-Location revanced
 The patch bundle is written below `patches/build/libs`. Use that bundle with ReVanced CLI
 or a manager that supports importing third-party patch bundles, and select
 `Enrich media metadata` when patching an original YouTube Music APK.
+
+To build the bundle and patch YouTube Music with the checked-in CLI, upstream patches, and
+stable signing keystore in one step, run this from the repository root:
+
+```powershell
+.\Build-ReVanced-YouTube-Music.bat
+```
+
+By default, the script uses the newest stock `com.google.android.apps.youtube.music*.apk`
+under `revanced/install` and writes `youtube-music-revanced-chudpresence.apk` there. You can
+also pass explicit input and output APK paths as the first and second arguments.
 
 ## Verify on a device
 

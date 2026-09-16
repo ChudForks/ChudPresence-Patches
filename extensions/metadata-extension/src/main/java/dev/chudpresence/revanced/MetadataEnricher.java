@@ -63,7 +63,8 @@ public final class MetadataEnricher {
                 LATEST_METADATA.put(session, metadata);
             }
         }
-        if (trackKey == null || hasText(metadata, MediaMetadata.METADATA_KEY_ALBUM)) return;
+        if (trackKey == null || (hasText(metadata, MediaMetadata.METADATA_KEY_ALBUM)
+            && hasPublicArtwork(metadata))) return;
 
         TrackMetadata cached;
         synchronized (LOCK) {
@@ -109,6 +110,9 @@ public final class MetadataEnricher {
                 builder.putString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST, extra.albumArtist);
             }
             if (extra.year > 0) builder.putLong(MediaMetadata.METADATA_KEY_YEAR, extra.year);
+            if (extra.artworkUrl != null && !hasPublicArtwork(latest)) {
+                builder.putString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI, extra.artworkUrl);
+            }
             MediaMetadata enriched = builder.build();
             LATEST_METADATA.put(session, enriched);
             session.setMetadata(enriched);
@@ -118,6 +122,19 @@ public final class MetadataEnricher {
     private static boolean hasText(MediaMetadata metadata, String key) {
         String value = metadata.getString(key);
         return value != null && !value.trim().isEmpty();
+    }
+
+    private static boolean hasPublicArtwork(MediaMetadata metadata) {
+        String[] candidates = {
+            metadata.getString(MediaMetadata.METADATA_KEY_ART_URI),
+            metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI),
+            metadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI)
+        };
+        for (String candidate : candidates) {
+            if (candidate != null && candidate.trim().startsWith("https://")
+                && candidate.trim().length() <= 300) return true;
+        }
+        return false;
     }
 
     private static String extractVideoId(MediaMetadata metadata) {

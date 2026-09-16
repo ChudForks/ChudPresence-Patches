@@ -11,6 +11,9 @@ public class YouTubeMusicMetadataClientTest {
     public void parsesAlbumArtistAndYearFromMatchingQueueItem() throws Exception {
         JSONObject response = new JSONObject("{\"contents\":[{\"playlistPanelVideoRenderer\":{" +
             "\"videoId\":\"iKLU7z_xdYQ\"," +
+            "\"thumbnail\":{\"thumbnails\":[" +
+            "{\"url\":\"https://lh3.googleusercontent.com/cover=w60-h60\"}," +
+            "{\"url\":\"https://lh3.googleusercontent.com/cover=w544-h544\"}]}," +
             "\"title\":{\"runs\":[{\"text\":\"Walk On Water (feat. Beyoncé)\"}]}," +
             "\"longBylineText\":{\"runs\":[" +
             "{\"text\":\"Eminem\",\"navigationEndpoint\":{\"browseEndpoint\":{" +
@@ -29,6 +32,7 @@ public class YouTubeMusicMetadataClientTest {
         assertEquals("Revival", result.album);
         assertEquals("Eminem", result.albumArtist);
         assertEquals(2017, result.year);
+        assertEquals("https://lh3.googleusercontent.com/cover=w544-h544", result.artworkUrl);
     }
 
     @Test
