@@ -33,7 +33,7 @@ final class YouTubeMusicMetadataClient {
         throws IOException, JSONException {
         if (videoId != null) {
             JSONObject nextBody = requestBody().put("videoId", videoId);
-            TrackMetadata result = findTrack(request("next", nextBody), videoId, expectedTitle);
+            TrackMetadata result = findTrack(request("next", nextBody), videoId, expectedTitle, expectedArtist);
             if (result != null) return result;
         }
 
@@ -42,7 +42,7 @@ final class YouTubeMusicMetadataClient {
         JSONObject searchBody = requestBody()
             .put("query", query)
             .put("params", "EgWKAQIIAWoMEA4QChADEAQQCRAF");
-        return findTrack(request("search", searchBody), videoId, expectedTitle);
+        return findTrack(request("search", searchBody), videoId, expectedTitle, expectedArtist);
     }
 
     private static JSONObject requestBody() throws JSONException {
@@ -92,13 +92,18 @@ final class YouTubeMusicMetadataClient {
     }
 
     static TrackMetadata findTrack(Object node, String videoId, String expectedTitle) {
-        return findTrack(node, videoId, expectedTitle, new HashSet<>());
+        return findTrack(node, videoId, expectedTitle, null);
+    }
+
+    static TrackMetadata findTrack(Object node, String videoId, String expectedTitle, String expectedArtist) {
+        return findTrack(node, videoId, expectedTitle, expectedArtist, new HashSet<>());
     }
 
     private static TrackMetadata findTrack(
         Object node,
         String videoId,
         String expectedTitle,
+        String expectedArtist,
         Set<Object> visited
     ) {
         if (node == null || node == JSONObject.NULL || !visited.add(node)) return null;
@@ -109,18 +114,19 @@ final class YouTubeMusicMetadataClient {
             if (renderer == null) renderer = object.optJSONObject("musicResponsiveListItemRenderer");
             if (renderer != null && isTarget(renderer, videoId, expectedTitle)) {
                 TrackMetadata metadata = parseRenderer(renderer);
-                if (metadata != null && !metadata.isEmpty()) return metadata;
+                if (metadata != null && !metadata.isEmpty()
+                    && (videoId != null || expectedArtist == null || sameArtist(expectedArtist, metadata.albumArtist))) return metadata;
             }
 
             Iterator<String> keys = object.keys();
             while (keys.hasNext()) {
-                TrackMetadata result = findTrack(object.opt(keys.next()), videoId, expectedTitle, visited);
+                TrackMetadata result = findTrack(object.opt(keys.next()), videoId, expectedTitle, expectedArtist, visited);
                 if (result != null) return result;
             }
         } else if (node instanceof JSONArray) {
             JSONArray array = (JSONArray) node;
             for (int i = 0; i < array.length(); i++) {
-                TrackMetadata result = findTrack(array.opt(i), videoId, expectedTitle, visited);
+                TrackMetadata result = findTrack(array.opt(i), videoId, expectedTitle, expectedArtist, visited);
                 if (result != null) return result;
             }
         }
@@ -128,21 +134,25 @@ final class YouTubeMusicMetadataClient {
     }
 
     private static boolean isTarget(JSONObject renderer, String videoId, String expectedTitle) {
-        if (videoId != null && videoId.equals(renderer.optString("videoId"))) return true;
+        if (videoId != null) return videoId.equals(rendererVideoId(renderer));
         String title = rendererTitle(renderer);
         return title != null && expectedTitle != null && title.equalsIgnoreCase(expectedTitle.trim());
     }
 
     private static TrackMetadata parseRenderer(JSONObject renderer) {
         String artworkUrl = thumbnailUrl(renderer);
+        String videoId = rendererVideoId(renderer);
+        String title = rendererTitle(renderer);
         JSONArray runs = runs(renderer.optJSONObject("longBylineText"));
         if (runs == null) runs = runs(renderer.optJSONObject("subtitle"));
         if (runs == null) runs = flexColumnRuns(renderer, 1);
         if (runs == null) {
-            return artworkUrl == null ? null : new TrackMetadata(null, null, 0, artworkUrl);
+            return new TrackMetadata(null, null, 0, artworkUrl, videoId, null, null, title, null);
         }
 
         String album = null;
+        String albumUrl = null;
+        String artistUrl = null;
         StringBuilder artists = new StringBuilder();
         int year = 0;
         for (int i = 0; i < runs.length(); i++) {
@@ -163,7 +173,9 @@ final class YouTubeMusicMetadataClient {
 
             if ("MUSIC_PAGE_TYPE_ALBUM".equals(pageType)) {
                 album = text;
+                albumUrl = browseUrl(browse);
             } else if ("MUSIC_PAGE_TYPE_ARTIST".equals(pageType)) {
+                if (artistUrl == null) artistUrl = browseUrl(browse);
                 if (artists.length() > 0) artists.append(", ");
                 artists.append(text);
             } else if (text.matches("(?:19|20)\\d{2}")) {
@@ -172,7 +184,32 @@ final class YouTubeMusicMetadataClient {
         }
 
         String albumArtist = artists.length() == 0 ? null : artists.toString();
-        return new TrackMetadata(album, albumArtist, year, artworkUrl);
+        return new TrackMetadata(album, albumArtist, year, artworkUrl, videoId, artistUrl, albumUrl, title, albumArtist);
+    }
+
+    private static String browseUrl(JSONObject browse) {
+        String id = browse == null ? null : clean(browse.optString("browseId", null));
+        return id != null && id.matches("[A-Za-z0-9_-]{2,128}")
+            ? "https://music.youtube.com/browse/" + id : null;
+    }
+
+    private static String rendererVideoId(JSONObject renderer) {
+        String id = clean(renderer.optString("videoId", null));
+        JSONObject playlist = renderer.optJSONObject("playlistItemData");
+        if (id == null && playlist != null) id = clean(playlist.optString("videoId", null));
+        JSONObject endpoint = renderer.optJSONObject("navigationEndpoint");
+        JSONObject watch = endpoint == null ? null : endpoint.optJSONObject("watchEndpoint");
+        if (id == null && watch != null) id = clean(watch.optString("videoId", null));
+        return id != null && id.matches("[A-Za-z0-9_-]{11}") ? id : null;
+    }
+
+    static boolean sameArtist(String expected, String actual) {
+        return actual != null && normalize(expected).equals(normalize(actual));
+    }
+
+    static String normalize(String value) {
+        return value == null ? "" : java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFKD)
+            .toLowerCase(Locale.ROOT).replaceAll("\\p{M}+", "").replaceAll("[^\\p{L}\\p{N}]+", "");
     }
 
     private static String thumbnailUrl(JSONObject renderer) {
@@ -232,7 +269,7 @@ final class YouTubeMusicMetadataClient {
         return format.format(new Date());
     }
 
-    private static String readLimited(InputStream input) throws IOException {
+    static String readLimited(InputStream input) throws IOException {
         StringBuilder result = new StringBuilder(32 * 1024);
         try (BufferedReader reader = new BufferedReader(
             new InputStreamReader(input, StandardCharsets.UTF_8))) {
