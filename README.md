@@ -2,10 +2,11 @@
 
 The custom bundle adds links and artwork to Android media sessions for:
 
+- Hulu **6.34.0+18552420-google**: `Expose Hulu media metadata` ([build and validation notes](HULU.md)).
 - YouTube Music **8.40.54**: `Enrich media metadata`.
 - YouTube **20.40.45**: `Expose YouTube media metadata`.
 
-Both patches preserve the original synchronous metadata update and enrich it off the
+The YouTube patches preserve the original synchronous metadata update and enrich it off the
 playback thread. They expose the current playing ID, not a title-search guess.
 The Music patch hooks the playback-stage video-details object to recover the song ID
 that the stock media session omits. These accessors are version-specific, so compatibility
@@ -63,7 +64,12 @@ Outputs (existing outputs are backed up before rebuilding):
 
 - `install/youtube-music-revanced-chudpresence-metadata.apk`
 - `install/youtube-revanced-chudpresence-metadata.apk`
-- `patches/build/libs/patches-0.2.0.rvp`
+- `patches/build/libs/patches-0.3.1.rvp`
+
+For a Hulu-only bundle, run `./revanced/Build-HuluPatch.ps1` from the repository root.
+It builds and tests the extensions, then packages `patches/build/libs/hulu-metadata-0.3.1.rvp`
+with only the Hulu patch, its metadata classes, and required generated API helpers. It does not install an
+APK or modify ChudPresence Mobile.
 
 The existing Music signing keystore is reused for both apps. Keep it: future updates
 must use the same signing identity to preserve app data. Stock APKs and prior builds

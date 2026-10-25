@@ -12,7 +12,7 @@ kotlin {
 patches {
     about {
         name = "ChudPresence ReVanced patches"
-        description = "YouTube and YouTube Music patches for richer media metadata and presence links"
+        description = "Hulu, YouTube and YouTube Music patches for richer media metadata and presence links"
         source = "https://github.com/chudpresence/mobile"
         author = "ChudPresence"
         contact = "https://github.com/chudpresence/mobile/issues"
