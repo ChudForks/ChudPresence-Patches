@@ -1,5 +1,10 @@
 # ChudPresence ReVanced metadata patches
 
+This directory is a standalone Git repository nested in the ChudPresence Mobile
+workspace. Its history is preserved from the former `revanced/` directory in the
+parent repository. APKs, signing material, and generated build outputs stay local
+and are ignored by this repository.
+
 The custom bundle adds links and artwork to Android media sessions for:
 
 - Hulu **6.34.0+18552420-google**: `Expose Hulu media metadata` ([build and validation notes](HULU.md)).
@@ -41,15 +46,16 @@ whatever standard metadata they expose.
 
 ## Build on Windows
 
-Put the stock, standalone APKs in `revanced/install`, then run from the repository root:
+Put the stock, standalone APKs in `install`, then run these commands from this
+repository's root:
 
 ```powershell
-.\Build-ReVanced-YouTube-Music.bat
-.\Build-ReVanced-YouTube.bat
+.\Build-PatchedApp.ps1 -App youtube_music
+.\Build-PatchedApp.ps1 -App youtube
 ```
 
-The wrappers use `Build-PatchedApp.ps1`, ReVanced CLI 6.0.0, the locally built upstream
-patch bundle, and the custom bundle. They apply the compatible upstream defaults plus
+The shared script uses ReVanced CLI 6.0.0, the locally built upstream patch bundle,
+and the custom bundle. It applies the compatible upstream defaults plus
 the selected metadata patch. GitHub CLI authentication with `read:packages` is used for
 build dependencies; an already populated Gradle cache can be used offline. JDK 21 and
 the Android SDK are required. Set `REVANCED_PATCHES_RVP` to override the upstream bundle.
@@ -66,20 +72,20 @@ Outputs (existing outputs are backed up before rebuilding):
 - `install/youtube-revanced-chudpresence-metadata.apk`
 - `patches/build/libs/patches-0.3.1.rvp`
 
-For a Hulu-only bundle, run `./revanced/Build-HuluPatch.ps1` from the repository root.
+For a Hulu-only bundle, run `./Build-HuluPatch.ps1` from this repository root.
 It builds and tests the extensions, then packages `patches/build/libs/hulu-metadata-0.3.1.rvp`
 with only the Hulu patch, its metadata classes, and required generated API helpers. It does not install an
 APK or modify ChudPresence Mobile.
 
 The existing Music signing keystore is reused for both apps. Keep it: future updates
 must use the same signing identity to preserve app data. Stock APKs and prior builds
-remain in place. Optional paths can be supplied to the shared script:
+remain in place. From the parent workspace root, optional paths can be supplied to the shared script:
 
 ```powershell
 .\revanced\Build-PatchedApp.ps1 -App youtube -InputApk C:\path\youtube.apk -OutputApk C:\path\patched.apk
 ```
 
-To build the bundle and run parser tests without patching an APK:
+To build the bundle and run parser tests without patching an APK from the parent workspace root:
 
 ```powershell
 cd revanced

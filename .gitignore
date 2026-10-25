@@ -1,0 +1,13 @@
+# Gradle and IDE state
+.gradle/
+.kotlin/
+.idea/
+.vs/
+**/build/
+**/.verify-build/
+
+# Local APK inputs, outputs, and signing material
+/install/
+*.apk
+*.keystore
+*.jks
