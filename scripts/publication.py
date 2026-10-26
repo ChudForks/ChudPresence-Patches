@@ -24,7 +24,8 @@ PATCH_CLASSES = {
 ROOT_FILES = {
     ".gitignore", ".gitattributes", "README.md", "HULU.md", "LICENSE", "NOTICE",
     "Build-HuluPatch.ps1", "Build-PatchedApp.ps1", "gradlew", "gradlew.bat",
-    "gradle.properties", "settings.gradle.kts", "patches.json",
+    "gradle.properties", "settings.gradle.kts", "patches.json", "presence-services.json",
+    "METADATA-CONTRACT.md",
 }
 BUILD_FILES = {
     "gradle/libs.versions.toml", "gradle/wrapper/gradle-wrapper.properties",
