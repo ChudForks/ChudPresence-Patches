@@ -1,0 +1,7 @@
+{
+  "version": "v0.3.1",
+  "created_at": "2026-10-26T00:05:31",
+  "description": "Custom ChudPresence media metadata patches for:\n\n- Hulu 6.34.0+18552420-google: Expose Hulu media metadata.\n- YouTube Music 8.40.54: Enrich media metadata.\n- YouTube 20.40.45: Expose YouTube media metadata.\n\nAdd the patches.json URL from the repository README as a custom source in ReVanced Manager. Keep the official patch source for upstream features.\n\nAssets contain only the custom patch bundle and its SHA-256 checksum. Obtain compatible stock APKs separately. The upstream YouTube quality backport is provided as source in upstream-fixes/ and is not included in this custom bundle.\n",
+  "download_url": "https://github.com/ChudForks/ChudPresence-Patches/releases/download/v0.3.1/patches-0.3.1.rvp",
+  "signature_download_url": null
+}
