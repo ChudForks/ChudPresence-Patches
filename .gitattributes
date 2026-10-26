@@ -1,0 +1,4 @@
+gradlew text eol=lf
+*.bat text eol=crlf
+.github/** text eol=lf
+scripts/** text eol=lf

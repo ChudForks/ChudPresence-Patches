@@ -13,10 +13,10 @@ patches {
     about {
         name = "ChudPresence ReVanced patches"
         description = "Hulu, YouTube and YouTube Music patches for richer media metadata and presence links"
-        source = "https://github.com/chudpresence/mobile"
+        source = "https://github.com/ChudForks/ChudPresence-Patches"
         author = "ChudPresence"
-        contact = "https://github.com/chudpresence/mobile/issues"
-        website = "https://github.com/chudpresence/mobile"
+        contact = "https://github.com/ChudForks/ChudPresence-Patches/issues"
+        website = "https://github.com/ChudForks/ChudPresence-Patches"
         license = "GNU General Public License v3.0"
     }
 }

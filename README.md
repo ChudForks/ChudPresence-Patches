@@ -1,104 +1,134 @@
-# ChudPresence ReVanced metadata patches
+# ChudPresence Patches
 
-This directory is a standalone Git repository nested in the ChudPresence Mobile
-workspace. Its history is preserved from the former `revanced/` directory in the
-parent repository. APKs, signing material, and generated build outputs stay local
-and are ignored by this repository.
+Custom [ReVanced](https://revanced.app) patches that expose richer Android
+media-session metadata for ChudPresence and other media-session consumers.
 
-The custom bundle adds links and artwork to Android media sessions for:
+One versioned .rvp bundle contains all three custom patches:
 
-- Hulu **6.34.0+18552420-google**: `Expose Hulu media metadata` ([build and validation notes](HULU.md)).
-- YouTube Music **8.40.54**: `Enrich media metadata`.
-- YouTube **20.40.45**: `Expose YouTube media metadata`.
+| App | Compatible stock version | Patch | Published metadata |
+| --- | --- | --- | --- |
+| Hulu (com.hulu.plus) | 6.34.0+18552420-google | **Expose Hulu media metadata** | Title, series, season/episode, duration, content ID, public artwork and an available public watch URL. |
+| YouTube Music (com.google.android.apps.youtube.music) | 8.40.54 | **Enrich media metadata** | Exact playing song ID, song/artist/album links, album metadata and public artwork. |
+| YouTube (com.google.android.youtube) | 20.40.45 | **Expose YouTube media metadata** | Playing video ID, creator/channel link, public artwork and video/Shorts URL. |
 
-The YouTube patches preserve the original synchronous metadata update and enrich it off the
-playback thread. They expose the current playing ID, not a title-search guess.
-The Music patch hooks the playback-stage video-details object to recover the song ID
-that the stock media session omits. These accessors are version-specific, so compatibility
-is pinned to the APK verified above. YouTube hooks both foreground and background
-playing-ID updates and observes player parameters to distinguish Shorts from prefetch.
+The hooks are version-specific. Use the listed stock versions. The YouTube and
+Music patches publish the original metadata immediately and enrich it off the
+playback thread. Public lookups are cached; stale results cannot overwrite a
+newer item, and lookup failures leave playback unaffected. Hulu reads metadata
+already loaded by its player without network requests.
 
-Public Music album/artist information is resolved through WEB_REMIX `next` for the exact
-ID. Public YouTube creator information is resolved through oEmbed for the exact ID.
-Lookups are cached, failures retry after a delay when metadata updates again, and late
-results cannot overwrite a newer track. For YouTube, the title and creator must match the
-current media session before attaching a captured ID resolved from oEmbed. Playback is
-unaffected by a network failure. Public lookups can fail for private, unavailable or
-restricted items, and Shorts require an active media session from the player.
+## Add to ReVanced Manager
 
-## Media-session contract
+Use this stable custom patch source URL:
 
-Besides standard ALBUM, ALBUM_ARTIST, YEAR and ALBUM_ART_URI keys, the extension adds:
-
-| Key | Value |
-| --- | --- |
-| `dev.chudpresence.metadata.VERSION` | Contract version `1` (long) |
-| `dev.chudpresence.metadata.VIDEO_ID` | Exact playing song/video ID |
-| `dev.chudpresence.metadata.CONTENT_URL` | YouTube Music song or YouTube video/Short URL |
-| `dev.chudpresence.metadata.CONTENT_TYPE` | `song`, `video`, or `short` |
-| `dev.chudpresence.metadata.ARTIST_URL` | Music artist page or YouTube creator channel |
-| `dev.chudpresence.metadata.ALBUM_URL` | Music album browse URL, when available |
-
-ChudPresence 1.1 reads these keys in both Local and Server mode. Artist is the default
-second line; the app offers an album option for Music. Artwork links to the album with
-an artist-page fallback. Missing destinations are omitted. Unpatched apps still publish
-whatever standard metadata they expose.
-
-## Build on Windows
-
-Put the stock, standalone APKs in `install`, then run these commands from this
-repository's root:
-
-```powershell
-.\Build-PatchedApp.ps1 -App youtube_music
-.\Build-PatchedApp.ps1 -App youtube
+```text
+https://raw.githubusercontent.com/ChudForks/ChudPresence-Patches/main/patches.json
 ```
 
-The shared script uses ReVanced CLI 6.0.0, the locally built upstream patch bundle,
-and the custom bundle. It applies the compatible upstream defaults plus
-the selected metadata patch. GitHub CLI authentication with `read:packages` is used for
-build dependencies; an already populated Gradle cache can be used offline. JDK 21 and
-the Android SDK are required. Set `REVANCED_PATCHES_RVP` to override the upstream bundle.
+1. In ReVanced Manager, open **Patches**, tap the edit button, then **+**.
+2. Choose **Enter URL** and paste the source URL above.
+3. Select a compatible stock APK obtained separately and choose its metadata patch.
+4. Keep the official ReVanced source for any upstream patches you also want to apply.
 
-YouTube builds automatically include the merged upstream quality-selection fix from
-[ReVanced MR !6983](https://gitlab.com/ReVanced/revanced-patches/-/merge_requests/6983).
-It restores the available AVC resolutions when a response offers only one VP9 quality.
-The backport, build provenance and regression checks are documented in
-[`upstream-fixes/README.md`](upstream-fixes/README.md).
+The Manager source is a JSON manifest, rather than a direct .rvp link. These
+steps follow the [official Manager documentation](https://github.com/ReVanced/revanced-manager/blob/main/docs/2_3_managing_patches.md).
+Alternatively, download the custom bundle from [Releases](https://github.com/ChudForks/ChudPresence-Patches/releases/latest).
+SHA256SUMS accompanies each bundle. Releases currently have no detached signature;
+signature_download_url is null in the manifest.
 
-Outputs (existing outputs are backed up before rebuilding):
+This repository distributes patch source and custom patch bundles. Obtain
+application APKs, ReVanced Manager/CLI, GmsCore, and official patch bundles from
+their respective sources. APKs, signing keys, upstream ReVanced checkouts and
+bundles, and local build caches stay outside Git and release assets.
 
-- `install/youtube-music-revanced-chudpresence-metadata.apk`
-- `install/youtube-revanced-chudpresence-metadata.apk`
-- `patches/build/libs/patches-0.3.1.rvp`
+## YouTube quality-selection source backport
 
-For a Hulu-only bundle, run `./Build-HuluPatch.ps1` from this repository root.
-It builds and tests the extensions, then packages `patches/build/libs/hulu-metadata-0.3.1.rvp`
-with only the Hulu patch, its metadata classes, and required generated API helpers. It does not install an
-APK or modify ChudPresence Mobile.
+[upstream-fixes/](upstream-fixes/README.md) contains a source diff for ReVanced's
+upstream quality-selection fix, with provenance and local regression checks.
+It restores the AVC resolution ladder when a response offers only one VP9 quality.
+It modifies the upstream **Spoof video streams** implementation and is **not part
+of the custom metadata bundle**. No patched upstream bundle is published here.
+The optional local YouTube APK workflow can build the backport from an upstream
+checkout supplied by the developer.
 
-The existing Music signing keystore is reused for both apps. Keep it: future updates
-must use the same signing identity to preserve app data. Stock APKs and prior builds
-remain in place. From the parent workspace root, optional paths can be supplied to the shared script:
+## Build the custom bundle
+
+Requirements: JDK 21, Python 3.12+, Android SDK, and GitHub Packages authentication
+with read:packages for ReVanced build dependencies. No application APK or
+upstream patch checkout is needed to build this bundle.
+
+Windows PowerShell, using an authenticated GitHub CLI:
 
 ```powershell
-.\revanced\Build-PatchedApp.ps1 -App youtube -InputApk C:\path\youtube.apk -OutputApk C:\path\patched.apk
-```
-
-To build the bundle and run parser tests without patching an APK from the parent workspace root:
-
-```powershell
-cd revanced
+$env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
 $env:ORG_GRADLE_PROJECT_githubPackagesUsername = gh api user --jq .login
 $env:ORG_GRADLE_PROJECT_githubPackagesPassword = gh auth token
 .\gradlew.bat :patches:buildAndroid :extensions:metadata-extension:testDebugUnitTest
+python -m unittest discover -s scripts -p 'test_*.py' -v
+python scripts/publication.py audit-source
+python scripts/publication.py prepare
 ```
 
-## Verify
+On Linux/macOS, use ./gradlew with the same tasks and provide the two Gradle
+credential properties through the environment. The build creates
+patches/build/libs/patches-<version>.rvp. The publication script inspects its
+contents and stages exactly that bundle and its checksum in dist/; that
+directory must be empty before preparing another release.
 
-Install the updated player APKs and ChudPresence 1.1 on the phone, retaining the same
-signing keys and GmsCore setup as the previous Music installation. Start reporting and
-check presence from a second Discord account (Discord hides your own activity buttons).
-Verify song/video changes, Shorts, live streams, paused playback, artist/album selection,
-and every title, second-line, artwork and button destination. Server mode also needs the
-updated relay and Windows worker; Local mode needs only the Android apps.
+For a local Hulu-only bundle, see [HULU.md](HULU.md) and Build-HuluPatch.ps1.
+The current 0.3.1 Hulu bundle fixes the missing generated runtime helper in the
+older 0.3.0 Hulu-only output. Public releases use the combined bundle.
+
+### Optional local APK workflows
+
+Build-PatchedApp.ps1 can combine a developer-supplied upstream bundle with the
+custom metadata patch and a stock APK. Its install/ directory is ignored.
+The Music workflow expects an upstream source/build under
+install/upstream-revanced-patches/; YouTube also supports the local quality
+backport. Set REVANCED_PATCHES_RVP to supply another compatible upstream bundle.
+These scripts never run in the public release workflow.
+
+## Release automation
+
+[GitHub Actions](.github/workflows/release.yml) builds the combined custom bundle
+and runs the extension and publication-policy tests on pushes and pull requests.
+The build uses the workflow token with packages: read for public build dependencies.
+
+For a new release, increase version in gradle.properties and push to main.
+The workflow:
+
+1. Audits every reachable Git commit and the current index against a patch-source
+   allowlist, rejecting app binaries, upstream checkouts, credentials and signing material.
+2. Builds and validates the custom bundle, including class ownership in both DEX files.
+3. Uploads exactly patches-<version>.rvp and SHA256SUMS using explicit paths.
+4. Publishes a GitHub Release tagged v<version> without replacing existing assets.
+5. Updates patches.json from the actual release URL and publication time.
+
+The Manager source URL stays the same across releases. The workflow can also be
+run manually. Add new custom patch definitions to the publication allowlist and
+update the release notes when expanding the bundle. Generated build directories
+and dependency caches are never uploaded as release assets or workflow artifacts.
+
+## Media-session contract
+
+Besides standard ALBUM, ALBUM_ARTIST, YEAR and ALBUM_ART_URI keys, the
+YouTube/Music extension adds:
+
+| Key | Value |
+| --- | --- |
+| dev.chudpresence.metadata.VERSION | Contract version 1 (long) |
+| dev.chudpresence.metadata.VIDEO_ID | Exact playing song/video ID |
+| dev.chudpresence.metadata.CONTENT_URL | Music song or YouTube video/Short URL |
+| dev.chudpresence.metadata.CONTENT_TYPE | song, video, or short |
+| dev.chudpresence.metadata.ARTIST_URL | Music artist page or YouTube creator channel |
+| dev.chudpresence.metadata.ALBUM_URL | Music album browse URL, when available |
+
+Hulu additionally publishes SEASON_NUMBER (long) and EPISODE_NUMBER (string)
+under the same namespace. See [HULU.md](HULU.md) for its complete behavior and
+validation limits. Missing metadata or destinations are omitted.
+
+## License
+
+[GNU GPL version 3 or later](LICENSE). Attribution and upstream provenance are
+recorded in [NOTICE](NOTICE) and [upstream-fixes/README.md](upstream-fixes/README.md).
+This is an independent custom patch source.

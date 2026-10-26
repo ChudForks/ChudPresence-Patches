@@ -1,0 +1,118 @@
+name: Build and release custom patches
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patches-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: android-actions/setup-android@v3
+      - name: Audit patch source and publication policy
+        run: |
+          python scripts/publication.py audit-source
+          python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Read bundle version
+        id: version
+        run: echo "version=$(python scripts/publication.py version)" >> "$GITHUB_OUTPUT"
+      - name: Build custom patch bundle and run extension tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew --no-daemon --console=plain :patches:buildAndroid :extensions:metadata-extension:testDebugUnitTest
+      - name: Audit and stage only the custom bundle
+        run: python scripts/publication.py prepare
+      - name: Upload the exact patch assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-patches
+          path: |
+            dist/patches-${{ steps.version.outputs.version }}.rvp
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: custom-patches
+          path: dist
+      - name: Verify the downloaded publication assets
+        run: |
+          python scripts/publication.py audit-source
+          python scripts/publication.py audit-bundle "dist/patches-$VERSION.rvp"
+          cd dist
+          sha256sum --check SHA256SUMS
+      - name: Publish a new version without replacing existing assets
+        run: |
+          tag="v$VERSION"
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Custom ChudPresence media metadata patches for:
+
+          - Hulu 6.34.0+18552420-google: Expose Hulu media metadata.
+          - YouTube Music 8.40.54: Enrich media metadata.
+          - YouTube 20.40.45: Expose YouTube media metadata.
+
+          Add the patches.json URL from the repository README as a custom source in ReVanced Manager. Keep the official patch source for upstream features.
+
+          Assets contain only the custom patch bundle and its SHA-256 checksum. Obtain compatible stock APKs separately. The upstream YouTube quality backport is provided as source in upstream-fixes/ and is not included in this custom bundle.
+          NOTES
+            gh release create "$tag" "dist/patches-$VERSION.rvp" dist/SHA256SUMS \
+              --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+              --title "ChudPresence Patches $tag" --notes-file "$RUNNER_TEMP/release-notes.md"
+          fi
+      - name: Update the stable ReVanced Manager manifest
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" \
+            --json tagName,publishedAt,body,assets,isDraft,isPrerelease > "$RUNNER_TEMP/release.json"
+          git pull --ff-only origin main
+          python scripts/publication.py manifest "$RUNNER_TEMP/release.json" --repository "$GITHUB_REPOSITORY"
+          git add patches.json
+          if ! git diff --cached --quiet; then
+            python scripts/publication.py audit-source
+            git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "chore: publish Manager source for v$VERSION"
+            git push origin HEAD:main
+          fi

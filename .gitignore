@@ -11,3 +11,23 @@
 *.apk
 *.keystore
 *.jks
+
+# Patch bundles are published only as explicitly selected release assets.
+*.rvp
+*.rve
+*.dex
+*.aab
+*.apks
+*.apkm
+*.xapk
+/dist/
+
+# Machine configuration and credentials
+local.properties
+.env
+.env.*
+*.pem
+*.p12
+*.pfx
+__pycache__/
+*.pyc

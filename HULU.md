@@ -36,10 +36,10 @@ the client; on-device playback and resolution preservation are not yet verified.
 
 JDK 21, Android SDK, the existing ReVanced CLI 6.0.0 in `install/`, and GitHub CLI
 authenticated with `read:packages` are required by the existing build configuration.
-From the repository root:
+From this patch repository's root:
 
 ```powershell
-.\revanced\Build-HuluPatch.ps1
+.\Build-HuluPatch.ps1
 ```
 
 The script builds the standard bundle, runs extension unit tests, and extracts a
@@ -69,8 +69,8 @@ The stock APK used in this session is `install/hulu-stock-6.34.0.apk`; it remain
 After building, verify a local patched APK without installing it:
 
 ```powershell
-java -Xmx2g -classpath "revanced/install/revanced-cli-6.0.0-all.jar;revanced/patches/build/hulu-tools" `
-  HuluPatchTools audit revanced/install/hulu-stock-6.34.0.apk revanced/install/hulu-metadata-0.3.1-validation.apk
+java -Xmx2g -classpath "install/revanced-cli-6.0.0-all.jar;patches/build/hulu-tools" `
+  HuluPatchTools audit install/hulu-stock-6.34.0.apk install/hulu-metadata-0.3.1-validation.apk
 ```
 
 The audit compares all stock classes as canonical smali, allowing equivalent DEX

@@ -1,0 +1,13 @@
+ChudPresence Patches
+Copyright 2026 ChudPresence contributors.
+Licensed under the GNU General Public License, version 3 or later.
+
+The YouTube playing-ID fingerprints follow ReVanced's GPLv3 video-ID and
+player-response hooks. The quality-selection source diff in upstream-fixes/
+is attributed to ReVanced merge request !6983; its provenance is documented
+in upstream-fixes/README.md.
+
+ReVanced Patcher and the ReVanced patches Gradle plugin are build dependencies.
+This repository is an independent custom patch source and is not affiliated
+with ReVanced, Google, YouTube, or Hulu. Upstream ReVanced patch bundles and
+application APKs are not distributed by this repository or its releases.
